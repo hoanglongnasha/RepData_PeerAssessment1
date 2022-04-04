@@ -41,21 +41,25 @@ library(dplyr)
 **Summarising the mean and median by interval across the dataset.**
 
 ```r
-daily_steps <- myData %>%
-    summarise(mean = mean(steps, na.rm = TRUE), median = median(steps, na.rm = TRUE))
-daily_steps
+total_steps <- myData %>%
+    group_by(date) %>%
+    summarise(sum_steps = sum(steps)) %>%
+    ungroup()
+total_steps %>%
+    summarise(mean = mean(sum_steps, na.rm = TRUE), median = median(sum_steps, na.rm = TRUE))
 ```
 
 ```
 ## # A tibble: 1 x 2
-##    mean median
-##   <dbl>  <dbl>
-## 1  37.4      0
+##     mean median
+##    <dbl>  <dbl>
+## 1 10766.  10765
 ```
 
+**Create a histogram with raw data**
 
 ```r
-hist(myData$steps, main = "Average daily steps", xlab = "Steps")
+hist(total_steps$sum_steps, main = "Average total steps", xlab = "Steps", breaks = 20)
 ```
 
 <img src="PA1_template_files/figure-html/raw-histogram-1.png" style="display: block; margin: auto;" />
@@ -128,27 +132,27 @@ filled_data <- myData
 for (i in interval_steps$interval) {
     filled_data[which(filled_data$interval == i & is.na(filled_data$steps)), "steps"] <- interval_steps[which(interval_steps$interval == i), "mean_steps"]
 }
-filled_interval_steps <- filled_data %>% summarise(mean_steps = mean(steps), median_steps = median(steps))
-filled_interval_steps
+filled_total_steps <- filled_data %>% group_by(date) %>% summarise(sum_steps = sum(steps)) %>% ungroup()
+filled_total_steps %>% summarise(mean_steps = mean(sum_steps), median_steps = median(sum_steps))
 ```
 
 ```
 ## # A tibble: 1 x 2
 ##   mean_steps median_steps
 ##        <dbl>        <dbl>
-## 1       37.4            0
+## 1     10766.       10766.
 ```
-After imputing missing values with the mean for each 5-minute interval, there is no change to either the mean or the median of the dataset.
+After imputing missing values with the mean for each 5-minute interval, there is no change to the mean and a slight (minor) change to the median of the dataset.
 
-
+**Create a histogram with imputed data**
 
 ```r
-hist(filled_data$steps, main = "Average daily steps (missing values imputed)", xlab = "Steps")
+hist(filled_total_steps$sum_steps, main = "Average total steps (missing data imputed)", xlab = "Steps", breaks = 20)
 ```
 
 <img src="PA1_template_files/figure-html/filled-histogram-1.png" style="display: block; margin: auto;" />
 
-Comparing the two histograms, the general shapes of the two are same. The only difference is the frequency of 0 steps taken.
+Comparing the two histograms, the general shapes of the two are same. The only difference is the frequency of the *mean* value due to the method of imputation.
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
@@ -185,5 +189,5 @@ filled_data %>%
 ```
 
 <img src="PA1_template_files/figure-html/panel-plot-1.png" style="display: block; margin: auto;" />
-
+There's a general pattern that during weekdays, a lot of steps are taken between 8-10 AM whereas the steps are more evenly spread during the weekends.
 
