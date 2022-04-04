@@ -7,19 +7,81 @@ output:
 
 
 ## Loading and preprocessing the data
+```{r echo = TRUE}
+library(readr)
+myData <- read_csv("activity.zip")
+```
 
 
 
 ## What is mean total number of steps taken per day?
+```{r echo = TRUE, tidy = TRUE, message = FALSE}
+library(dplyr)
+```
+
+**Summarising the mean and median by interval across the dataset.**
+```{r raw-summary, echo = TRUE, tidy = TRUE}
+daily_steps <- myData %>% summarise(mean = mean(steps, na.rm = TRUE), median = median(steps, na.rm = TRUE))
+daily_steps
+```
+
+```{r raw-histogram, echo = TRUE, fig.align = "center"}
+hist(myData$steps, main = "Average daily steps", xlab = "Steps")
+```
+
+
 
 
 
 ## What is the average daily activity pattern?
+```{r echo = TRUE, tidy = TRUE}
+interval_steps <- myData %>% group_by(interval) %>% summarise(mean_steps = mean(steps, na.rm = TRUE))
+interval_steps
+```
 
+``` {r steps-breakdown, echo = TRUE, fig.align = "center"}
+plot(interval_steps$interval, interval_steps$mean_steps, type = "l", main = "Average steps breakdown", xlab = "Interval", ylab = "Average number of steps")
+interval_steps[which.max(interval_steps$mean_steps),]
+```
+On average, across all days in the dataset, interval `r interval_steps[which.max(interval_steps$mean_steps),"interval"]` contains the maximum number of steps, i.e., `r max(interval_steps$mean_steps)`.
 
 
 ## Imputing missing values
+**The total number of missing values in the dataset**
+```{r echo = TRUE}
+length(myData[is.na(myData)])
+```
 
+**Imputing missing values by filling in the mean for that 5-minute interval**
+```{r filled-summary, echo = TRUE}
+filled_data <- myData
+for (i in interval_steps$interval) {
+    filled_data[which(filled_data$interval == i & is.na(filled_data$steps)), "steps"] <- interval_steps[which(interval_steps$interval == i), "mean_steps"]
+}
+filled_interval_steps <- filled_data %>% summarise(mean_steps = mean(steps), median_steps = median(steps))
+filled_interval_steps
+```
+After imputing missing values with the mean for each 5-minute interval, there is no change to either the mean or the median of the dataset.
+
+
+```{r filled-histogram, echo = TRUE, fig.align = "center"}
+hist(filled_data$steps, main = "Average daily steps (missing values imputed)", xlab = "Steps")
+```
+
+Comparing the two histograms, the general shapes of the two are same. The only difference is the frequency of 0 steps taken.
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+**Categorizing dates into weekdays and weekends**
+```{r echo = TRUE}
+filled_data <- filled_data %>% mutate(category = factor(ifelse(weekdays(date) %in% c("Saturday", "Sunday"), "weekends", "weekdays")))
+head(filled_data)
+```
+
+**Create a panel plot**
+```{r panel-plot, echo = TRUE, fig.align = "center", message = FALSE, tidy = TRUE}
+library(ggplot2)
+filled_data %>% group_by(interval, category) %>% summarise(mean_steps = mean(steps)) %>% ggplot(aes(x = interval, y = mean_steps)) + geom_line() + facet_wrap(facets = vars(category), nrow = 2) + theme_light() + ylab("Average number of steps") + ggtitle("Average number of steps by weekdays/weekends", subtitle = "Missing data imputed") +  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
+```
+
+
